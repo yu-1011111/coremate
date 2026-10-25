@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>{{ title }}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body class="bg-slate-50 h-screen flex flex-col">
+
+  <!-- ============ 顶部：标题 + 免责声明 ============ -->
+  <header class="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 pt-4 pb-3 shadow-md shrink-0">
+    <div class="max-w-md mx-auto">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xl">💓</div>
+        <h1 class="text-xl font-bold tracking-wide">{{ title }}</h1>
+        <span class="ml-auto text-[10px] bg-white/15 rounded-full px-2 py-0.5">校园健康管家</span>
+        <span id="identity-badge" class="text-[10px] bg-white/15 rounded-full px-2 py-0.5"></span>
+        <button id="btn-history" class="text-[10px] bg-white/15 rounded-full px-2 py-0.5 hover:bg-white/25 transition">🕒 历史记录</button>
+      </div>
+      <p class="mt-1.5 text-[11px] leading-relaxed text-white/80">{{ disclaimer }}</p>
+    </div>
+  </header>
+
+  <!-- ============ 中部：对话消息区 ============ -->
+  <main id="chat-box" class="flex-1 overflow-y-auto no-scrollbar px-3 py-4">
+    <div class="max-w-md mx-auto space-y-3">
+
+      <!-- 欢迎消息 -->
+      <div class="flex gap-2">
+        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm shrink-0">管</div>
+        <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm max-w-[80%]">
+          <p class="text-sm text-slate-700 leading-relaxed">你好呀，我是芯动管家。可以问我"午饭吃什么""怎么运动"，也可以随时和我聊聊最近的心情。</p>
+          <p class="mt-1.5 text-[10px] text-slate-400">{{ disclaimer }}</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ 底部：输入区（快捷坞 + 输入行） ============ -->
+  <footer class="bg-white border-t border-slate-200 px-3 py-3 pb-safe shrink-0">
+    <div class="max-w-md mx-auto">
+      <div id="quick-dock" class="flex gap-2 flex-wrap pb-2">
+        <div id="quick-dock-commands" class="contents"></div>
+        <button id="btn-selfcheck" class="bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-4 py-1.5 text-xs font-medium shadow-sm hover:bg-blue-100 transition">
+          📝 情绪自查便签
+        </button>
+        <button id="btn-health-form" class="bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-4 py-1.5 text-xs font-medium shadow-sm hover:bg-blue-100 transition">
+          🧪 模拟体检录入
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-voice" title="语音输入" class="w-10 h-10 rounded-full bg-slate-100 text-blue-600 text-xl flex items-center justify-center hover:bg-blue-50 transition shrink-0">🎤</button>
+        <button id="btn-camera" title="图像识别" class="w-10 h-10 rounded-full bg-slate-100 text-blue-600 text-xl flex items-center justify-center hover:bg-blue-50 transition shrink-0">📷</button>
+        <input id="chat-input" type="text" autocomplete="off" placeholder="输入健康或心情问题…"
+               class="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition">
+        <button id="btn-send" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 transition shrink-0">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.5-8.4c.8-.4.8-1.6 0-2L3.4 1.6c-.7-.3-1.4.2-1.4.9v5.1c0 .5.4 1 .9 1l11.6 1.4c.4 0 .4.6 0 .7L2.9 12.4c-.5.1-.9.5-.9 1v5.1c0 .7.7 1.2 1.4.9z"/></svg>
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ 抽屉：历史对话面板（z-40，低于高危弹层 z-[70]） ============ -->
+  <div id="history-drawer-mask" class="hidden fixed inset-0 z-40 bg-black/40"></div>
+  <div id="history-drawer" class="hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl z-40 translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="px-4 py-3 border-b border-slate-100 flex items-center shrink-0">
+      <h2 class="text-sm font-bold text-slate-800">🕒 历史记录</h2>
+      <button id="history-close" class="ml-auto w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">✕</button>
+    </div>
+    <div class="px-4 py-2 border-b border-slate-100 shrink-0">
+      <div class="flex items-center gap-2 bg-slate-100 rounded-full px-3 py-2">
+        <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+        </svg>
+        <input id="history-search" type="text" autocomplete="off" placeholder="搜索历史记录（如：尿酸、香菜、跑步）"
+               class="flex-1 bg-transparent text-xs outline-none text-slate-700 placeholder-slate-400">
+      </div>
+    </div>
+    <div id="history-list" class="flex-1 overflow-y-auto px-4 py-3 space-y-2"></div>
+    <div class="px-4 py-3 border-t border-slate-100 shrink-0">
+      <button id="history-clear" class="w-full bg-red-50 border border-red-200 text-red-600 rounded-full py-2.5 text-xs font-bold hover:bg-red-100 transition">🗑 清空历史记录</button>
+    </div>
+  </div>
+
+  <!-- ============ 模态：模拟体检录入表单 ============ -->
+  <div id="health-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+
+    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[88vh] flex flex-col shadow-2xl">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center shrink-0">
+        <h2 class="text-base font-bold text-slate-800">🧪 模拟体检录入</h2>
+        <button id="modal-close" class="ml-auto w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">✕</button>
+      </div>
+      <p class="px-5 pt-3 text-[11px] text-slate-400">性别为必填项；其余留空则不参与判定。BMI 由系统按身高体重自动计算。</p>
+      <div id="modal-error" class="hidden mx-5 mt-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs px-3 py-2"></div>
+      <form id="health-form" class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div id="form-profile-group"></div>
+        <div id="form-metrics-group"></div>
+      </form>
+      <div class="px-5 py-4 border-t border-slate-100 shrink-0">
+        <button id="health-submit" type="button" class="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-bold hover:bg-blue-700 transition">
+          提交并生成健康标签
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 模态：情绪自查便签 ============ -->
+  <div id="selfcheck-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[88vh] flex flex-col shadow-2xl">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center shrink-0">
+        <h2 class="text-base font-bold text-slate-800">📝 情绪自查便签</h2>
+        <button id="selfcheck-close" class="ml-auto w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">✕</button>
+      </div>
+      <p class="px-5 pt-3 text-[11px] text-slate-400">勾选最近困扰你的情况，并选择持续时长。你的回答只用于生成适合自己的应对建议。</p>
+      <div id="selfcheck-error" class="hidden mx-5 mt-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs px-3 py-2"></div>
+      <form id="selfcheck-form" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <p class="text-xs font-bold text-violet-600">最近两周，你的状态符合以下哪些描述？</p>
+        <div id="selfcheck-items" class="space-y-2"></div>
+        <p class="text-xs font-bold text-violet-600 pt-2">这些困扰持续多久了？</p>
+        <div id="selfcheck-durations" class="flex flex-wrap gap-2"></div>
+      </form>
+      <div class="px-5 py-4 border-t border-slate-100 shrink-0">
+        <button id="selfcheck-submit" type="button" class="w-full bg-violet-600 text-white rounded-xl py-3 text-sm font-bold hover:bg-violet-700 transition">
+          提交并查看建议
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 独立弹层：高危警告（SC3 + 3 个月以上） ============ -->
+  <div id="high-risk-modal" class="hidden fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl border-2 border-red-500 overflow-hidden shadow-2xl">
+      <div class="bg-red-500 text-white px-4 py-3 flex items-center gap-2">
+        <span class="text-xl">⚠️</span>
+        <p class="text-sm font-bold">需要立即关注</p>
+      </div>
+      <div class="p-4 space-y-3">
+        <p class="text-sm text-red-700 font-semibold leading-relaxed">⚠️ 需要立即关注：你描述的情况已持续 3 个月以上，建议尽快寻求专业支持。你不用一个人扛——下面的热线 24 小时随时可以打：</p>
+        <div class="bg-red-50 border border-red-200 rounded-xl p-3">
+          <p class="text-sm font-bold text-red-700">☎️ 校内 24 小时心理服务热线</p>
+          <a href="tel:0516-83105638" class="mt-2 inline-flex items-center gap-2 bg-red-600 text-white text-sm font-bold rounded-full px-5 py-2.5 hover:bg-red-700 transition">
+            <span>📞</span><span>一键拨号 0516-83105638</span>
+          </a>
+          <p class="mt-1.5 text-[11px] text-slate-500">服务时间：24 小时</p>
+        </div>
+        <button id="high-risk-close" class="w-full bg-slate-100 text-slate-600 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-200 transition">
+          我知道了，查看建议
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div id="toast-box" class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] space-y-2 pointer-events-none"></div>
+
+  <!-- 隐藏的菜品图片选择入口（📷 按钮触发） -->
+  <input type="file" id="food-file-input" accept="image/*" class="hidden">
+
+<script>
+/* ====================================================================
+ * 分区① 常量区：端点、界面文案、演示用户、号码形态（决策 D9/D11）
+ * ==================================================================== */
+const ENDPOINTS = {
+  chat: '/api/v1/chat',
+  health: '/api/v1/health/analysis',
+  recognizeFood: '/api/v1/recognize_food',
+  selfcheck: '/api/v1/mood/selfcheck',
+  history: '/api/v1/history'
+};
+
+const UI_TEXT = {
+  emptyInput: '请输入内容后再发送',
+  loading: '正在输入…',
+  serviceError: '服务暂时不可用，请稍后再试',
+  networkError: '网络异常，请检查服务是否启动',
+  genderRequired: '请选择性别',
+  allEmptyForm: '除性别外请至少填写一项档案或指标',
+  noTags: '当前指标未见异常',
+  crisisFallback: '求助资源加载异常，请直接拨打 12356',
+  audioUnavailable: '🎵 音频暂不可用',
+  speechUnsupported: '当前浏览器不支持语音输入，建议使用 Chrome 或 Edge',
+  micDenied: '麦克风权限被拒绝，请在浏览器设置中允许后重试',
+  noSpeech: '未识别到语音内容，请重试',
+  speechError: '语音识别出错，请重试',
+  voiceRecording: '正在聆听…',
+  recognizingFood: '正在识别菜品…',
+  selfcheckTitle: '📝 情绪自查便签',
+  selfcheckEmpty: '请至少勾选一条自查条目',
+  selfcheckDurationMissing: '请选择困扰持续时长',
+  selfcheckLoading: '分析中…',
+  selfcheckSubmit: '提交并查看建议',
+  selfcheckClose: '我知道了，查看建议',
+  highRiskWarning: '⚠️ 需要立即关注：你描述的情况已持续 3 个月以上，建议尽快寻求专业支持。你不用一个人扛——下面的热线 24 小时随时可以打：',
+  moreDishesHint: '还有更多菜品，因篇幅限制未展示全。可以告诉我你的具体需求，我再为你精准筛选。',
+  moreActionsHint: '还有更多动作，因篇幅限制未展示全。可以告诉我你的具体需求，我再为你精准筛选。',
+  portionHint: '推荐适量最好，吃得、练得刚刚好，比一味求多更有效。',
+  identityBadgePrefix: '当前身份：',
+  historyButtonLabel: '🕒 历史记录',
+  historyDrawerTitle: '🕒 历史记录',
+  historyEmptyHint: '暂无历史记录，开始对话后这里会显示最近的聊天内容。',
+  historyLoading: '正在加载历史记录…',
+  historyClearLabel: '🗑 清空历史记录',
+  historyClearConfirm: '确定要清空当前身份的全部对话历史吗？此操作不可恢复。',
+  historyClearSuccess: '历史记录已清空',
+  historyClearFailed: '清空失败，请稍后重试',
+  historySearchPlaceholder: '搜索历史记录（如：尿酸、香菜、跑步）',
+  historySearchEmpty: '没有找到相关的历史记录',
+  cuePrefix: '💡 '
+};
+
+const SC_ITEMS = [
+  { value: 'SC1', text: '有很长一段时间觉得非常孤独或者想找人说话' },
+  { value: 'SC2', text: '刚刚来到新学校，在学习或生活上遇到一些困难，或与同宿舍同学相处不愉快' },
+  { value: 'SC3', text: '发现自己性格有些变化，比以前沉默寡言，常常哭泣，注意力不集中或有辍学的想法' },
+  { value: 'SC4', text: '在情感问题上出现困扰，心情沮丧、长时间不能摆脱，或出现分手、失恋等让你一时无法应对的事' },
+  { value: 'SC5', text: '觉得与父母无法顺利沟通，常常产生冲突，甚至周末不愿意回家，不想见到他们' },
+  { value: 'SC6', text: '和恋人、舍友、同学、辅导员老师、导师或其他任何关系重要的人产生冲突或不愉快，以至于影响正常生活学习' },
+  { value: 'SC7', text: '学习、生活、情感压力过大，使你出现胸闷难受、心口疼痛等症状，但到医院检查又查不出身体问题' },
+  { value: 'SC8', text: '对毕业后何去何从充满困惑，想探索自己未来的职业兴趣或发展方向却犹豫不决……' },
+  { value: 'SC9', text: '发现自己每天上网的时间越来越长，与现实生活中的朋友接触越来越少……被某些特定事物思维反复顽固出现' }
+];
+
+const DURATION_OPTIONS = ['<2 周', '2 周-1 个月', '1-3 个月', '3 个月以上'];
+
+const HIGH_RISK_SC_ID = 'SC3';
+const HIGH_RISK_DURATION = '3 个月以上';
+
+const C01_HOTLINE = {
+  name: '校内 24 小时心理服务热线',
+  phone: '0516-83105638',
+  hours: '24 小时'
+};
+
+const USER_ID_STORAGE_KEY = 'coremate_user_id';
+const USER_ID_PREFIX = 'user_';
+const USER_ID_DIGITS = 4;
+
+const RECOMMEND_DISPLAY_LIMIT = 3;
+const AVOID_DISPLAY_LIMIT = 2;
+
+const QUICK_COMMANDS = [
+  { icon: '🥗', text: '食堂吃什么', sendText: '食堂吃什么', special: null },
+  { icon: '🏃', text: '宿舍怎么练', sendText: '宿舍怎么练', special: null },
+  { icon: '💖', text: '心情不好', sendText: '最近心情不好，有点难受', special: null },
+  { icon: '📷', text: '识别体检单', sendText: '', special: 'camera' }
+];
+
+const PHONE_SHAPE_RE = /^[0-9\-+\s()]{5,}$/;
+
+/* ====================================================================
+ * 分区② 工具区：转义、字段容错、滚动（决策 D9/D10）
+ * ==================================================================== */
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function safeText(value) {
+  return typeof value === 'string' ? value : '';
+}
+
+function safeList(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+/** Fisher–Yates 原地洗牌（展示层随机化唯一实现点；空/单元素天然无操作） */
+function shuffleInPlace(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = list[i];
+    list[i] = list[j];
+    list[j] = tmp;
+  }
+}
+
+function scrollToBottom() {
+  const box = document.getElementById('chat-box');
+  if (box) { box.scrollTop = box.scrollHeight; }
+}
+
+/** 音频播放地址构造：encodeURIComponent 编码 + 结构字符拒绝（防路径穿越） */
+function buildAudioUrl(objectId) {
+  if (typeof objectId !== 'string' || !objectId) { return null; }
+  if (/[\\/]/.test(objectId)) { return null; }
+  return '/static/audio/' + encodeURIComponent(objectId);
+}
+
+function showNotice(container, text, tone) {
+  const tones = {
+    info: 'bg-sky-50 border-sky-200 text-sky-700',
+    warn: 'bg-amber-50 border-amber-200 text-amber-700',
+    danger: 'bg-red-50 border-red-200 text-red-700'
+  };
+  const bar = document.createElement('div');
+  bar.className = 'max-w-md mx-auto rounded-lg border px-3 py-2 text-[11px] leading-relaxed ' + (tones[tone] || tones.info);
+  bar.textContent = text;
+  container.appendChild(bar);
+}
+
+/** 溢出提示行：独立浅灰小字（不复用 showNotice 提示条语义）；空文案短路 */
+function appendMoreHint(section, text) {
+  if (!text) { return; }
+  const hint = document.createElement('p');
+  hint.className = 'mt-1 text-[10px] text-slate-400 leading-relaxed';
+  hint.textContent = text;
+  section.appendChild(hint);
+}
+
+function showToast(text) {
+  const box = document.getElementById('toast-box');
+  const toast = document.createElement('div');
+  toast.className = 'bg-slate-800/90 text-white text-xs px-4 py-2.5 rounded-full shadow-lg animate-pulse';
+  toast.textContent = text;
+  box.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 2200);
+}
+
+/* ====================================================================
+ * 分区③ 渲染分支区：ROUTE_RENDERERS 四分支（决策 D3）
+ * ==================================================================== */
+
+/** SMALL_TALK：纯气泡，无附加结构 */
+function renderSmallTalk(container, data) {
+  /* 基础气泡已由 renderAssistantMessage 渲染，无附加内容 */
+}
+
+/** HEALTH_QUERY：推荐卡片 + 避雷标红（spec 6.3.5/6.3.6） */
+function renderHealthQuery(container, data) {
+  renderDietCards(container, data.diet_recommendations);
+  renderExerciseCards(container, data.exercise_recommendations);
+}
+
+/** MOOD_SUPPORT：安抚气泡 + 档位徽章 + 情绪资源卡片 + 极简建议 */
+function renderMoodSupport(container, data) {
+  renderMoodBadges(container, data);
+  renderMoodResourceCards(container, data.mood_resources);
+  renderDietCards(container, data.diet_recommendations);
+  renderExerciseCards(container, data.exercise_recommendations);
+}
+
+/** M4_CRISIS：红色危机卡片 + 一键拨号（spec 5.5；禁止任何推荐渲染） */
+function renderCrisisCard(container, data) {
+  const crisis = data.crisis || {};
+  const card = document.createElement('div');
+  card.className = 'max-w-md mx-auto rounded-2xl border-2 border-red-500 bg-red-50 overflow-hidden shadow-lg';
+
+  const inner = document.createElement('div');
+  inner.className = 'p-4 space-y-3';
+
+  /* 顺序不变式：opening → referrals → closing → disclaimer（spec 5.5.1.3） */
+  const opening = document.createElement('p');
+  opening.className = 'text-base font-bold text-red-700 leading-relaxed';
+  opening.textContent = safeText(crisis.opening);
+  inner.appendChild(opening);
+
+  const referrals = safeList(crisis.referrals);
+  if (referrals.length === 0) {
+    showNotice(inner, UI_TEXT.crisisFallback, 'danger');
+  } else {
+    const list = document.createElement('div');
+    list.className = 'space-y-2';
+    referrals.forEach(ref => {
+      list.appendChild(renderCrisisReferral(ref));
+    });
+    inner.appendChild(list);
+  }
+
+  const closing = document.createElement('p');
+  closing.className = 'text-sm font-semibold text-red-700 leading-relaxed pt-1 border-t border-red-200';
+  closing.textContent = safeText(crisis.closing);
+  inner.appendChild(closing);
+
+  const disc = document.createElement('p');
+  disc.className = 'text-[10px] text-red-400';
+  disc.textContent = safeText(crisis.disclaimer) || safeText(data.disclaimer);
+  inner.appendChild(disc);
+
+  card.appendChild(inner);
+  container.appendChild(card);
+}
+
+/** 单条求助资源：名称 + 原文联系方式 + 每号码一个一键拨号按钮 */
+function renderCrisisReferral(ref) {
+  const item = document.createElement('div');
+  item.className = 'bg-white rounded-xl border border-red-200 p-3';
+
+  const name = document.createElement('p');
+  name.className = 'text-sm font-bold text-red-700';
+  name.textContent = safeText(ref.name);
+  item.appendChild(name);
+
+  const contact = document.createElement('p');
+  contact.className = 'mt-1 text-xs text-slate-700 leading-relaxed';
+  contact.textContent = safeText(ref.contact);
+  item.appendChild(contact);
+
+  if (safeText(ref.hours)) {
+    const hours = document.createElement('p');
+    hours.className = 'mt-0.5 text-[11px] text-slate-500';
+    hours.textContent = '服务时间：' + ref.hours;
+    item.appendChild(hours);
+  }
+  if (safeText(ref.note)) {
+    const note = document.createElement('p');
+    note.className = 'mt-0.5 text-[11px] text-slate-400 leading-relaxed';
+    note.textContent = ref.note;
+    item.appendChild(note);
+  }
+
+  extractPhoneLinks(safeText(ref.contact)).forEach(link => {
+    const btn = document.createElement('a');
+    btn.href = link.href;
+    btn.className = 'mt-2 inline-flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold rounded-full px-4 py-2 hover:bg-red-700 transition';
+    btn.innerHTML = '<span>📞</span><span></span>';
+    btn.lastChild.textContent = '一键拨号 ' + link.display;
+    item.appendChild(btn);
+  });
+
+  return item;
+}
+
+/** tel: 链接三步生成（决策 D5）："​/"拆分 → 形态校验 → href 去空白 */
+function extractPhoneLinks(contact) {
+  if (!contact) { return []; }
+  const links = [];
+  contact.split('/').forEach(segment => {
+    const trimmed = segment.trim();
+    if (!trimmed) { return; }
+    if (!PHONE_SHAPE_RE.test(trimmed)) { return; }
+
+    if (trimmed.replace(/[^0-9]/g, '').length < 5) { return; }
+    links.push({ display: trimmed, href: 'tel:' + trimmed.replace(/\s+/g, '') });
+  });
+  return links;
+}
+
+/** 饮食推荐卡片组：推荐常规卡 + 避雷红卡 + 拦截附替代 */
+function renderDietCards(container, diet) {
+  if (!diet) { return; }
+  const recommended = safeList(diet.recommended_dishes).slice();
+  const avoided = safeList(diet.avoided_dishes).slice();
+  const recDrinks = safeList(diet.recommended_drinks);
+  const blkDrinks = safeList(diet.blocked_drinks);
+  if (recommended.length + avoided.length + recDrinks.length + blkDrinks.length === 0) { return; }
+
+  shuffleInPlace(recommended);
+  shuffleInPlace(avoided);
+
+  const hasMoreDishes = recommended.length > RECOMMEND_DISPLAY_LIMIT;
+  const hasMoreAvoided = avoided.length > AVOID_DISPLAY_LIMIT;
+
+  const section = document.createElement('div');
+  section.className = 'max-w-md mx-auto bg-white rounded-2xl shadow-sm p-3 space-y-2';
+
+  const title = document.createElement('p');
+  title.className = 'text-xs font-bold text-blue-600 flex items-center gap-1';
+  title.textContent = '🍚 饮食建议';
+  section.appendChild(title);
+
+  recommended.slice(0, RECOMMEND_DISPLAY_LIMIT).forEach(dish => {
+    if (dish.dish_id) { shown_dish_ids.add(dish.dish_id); }
+    section.appendChild(dietCard(dish.name, dish.reason, false));
+  });
+  recDrinks.forEach(drink => {
+    section.appendChild(dietCard(drink.name, drink.reason, false));
+  });
+  avoided.slice(0, AVOID_DISPLAY_LIMIT).forEach(dish => {
+    section.appendChild(dietCard(dish.name, dish.reason, true));
+  });
+  blkDrinks.forEach(drink => {
+    const swap = safeText(drink.swap_to);
+    const reason = safeText(drink.reason) + (swap ? '（可替代：' + swap + '）' : '');
+    section.appendChild(dietCard(drink.name, reason, true));
+  });
+  if (hasMoreDishes || hasMoreAvoided) {
+    appendMoreHint(section, UI_TEXT.moreDishesHint);
+  }
+  if (recommended.length > 5) {
+    appendMoreHint(section, UI_TEXT.portionHint);
+  }
+  safeList(diet.caution_notices).forEach(n => {
+    showNotice(section, safeText(n.reason) || safeText(n.target), 'warn');
+  });
+
+  container.appendChild(section);
+}
+
+function dietCard(name, reason, isTaboo) {
+  const card = document.createElement('div');
+  card.className = isTaboo
+    ? 'rounded-xl border-l-4 border-red-300 bg-red-50 px-3 py-2'
+    : 'rounded-xl border-l-4 border-emerald-400 bg-emerald-50 px-3 py-2';
+  const nameEl = document.createElement('p');
+  nameEl.className = isTaboo ? 'text-sm font-bold text-red-600' : 'text-sm font-semibold text-emerald-700';
+  nameEl.textContent = (isTaboo ? '⛔ ' : '✅ ') + safeText(name);
+  card.appendChild(nameEl);
+  if (safeText(reason)) {
+    const reasonEl = document.createElement('p');
+    reasonEl.className = 'mt-0.5 text-[11px] text-slate-500 leading-relaxed';
+    reasonEl.textContent = reason;
+    card.appendChild(reasonEl);
+  }
+  return card;
+}
+
+/** 运动推荐卡片组：动作 + 课表（天气降级）+ 避雷 + fallback 链 */
+function renderExerciseCards(container, exercise) {
+  if (!exercise) { return; }
+  const actions = safeList(exercise.recommended_actions).slice();
+  const avoided = safeList(exercise.avoided_actions).slice();
+  const courses = safeList(exercise.run_courses);
+  const fallbacks = safeList(exercise.fallback_suggestions);
+  if (actions.length + avoided.length + courses.length + fallbacks.length === 0) { return; }
+
+  shuffleInPlace(actions);
+  shuffleInPlace(avoided);
+
+  const hasMoreActions = actions.length > RECOMMEND_DISPLAY_LIMIT;
+  const hasMoreAvoided = avoided.length > AVOID_DISPLAY_LIMIT;
+
+  const section = document.createElement('div');
+  section.className = 'max-w-md mx-auto bg-white rounded-2xl shadow-sm p-3 space-y-2';
+
+  const title = document.createElement('p');
+  title.className = 'text-xs font-bold text-blue-600 flex items-center gap-1';
+  title.textContent = '🏃 运动建议';
+  section.appendChild(title);
+
+  actions.slice(0, RECOMMEND_DISPLAY_LIMIT).forEach(action => {
+    if (action.action_id) { shown_action_ids.add(action.action_id); }
+    const minutes = action.est_minutes != null ? '（约 ' + action.est_minutes + ' 分钟）' : '';
+    section.appendChild(exerciseCard(action.name, safeText(action.reason) + minutes, false, action.cue));
+  });
+  courses.forEach(course => {
+    const duration = course.duration_min != null ? '（' + course.duration_min + ' 分钟）' : '';
+    let reason = safeText(course.reason) + duration;
+    if (course.weather_blocked && safeText(course.weather_swap)) {
+      reason += ' ☔ 天气降级方案：' + course.weather_swap;
+    }
+    section.appendChild(exerciseCard(course.name, reason, false));
+  });
+  avoided.slice(0, AVOID_DISPLAY_LIMIT).forEach(action => {
+    section.appendChild(exerciseCard(action.name, safeText(action.reason), true));
+  });
+  fallbacks.forEach(fb => {
+    const line = document.createElement('div');
+    line.className = 'rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700';
+    line.textContent = '⤵️ 降级建议：' + safeText(fb.original) + ' → ' + safeText(fb.fallback);
+    section.appendChild(line);
+  });
+  if (hasMoreActions || hasMoreAvoided) {
+    appendMoreHint(section, UI_TEXT.moreActionsHint);
+  }
+  if (actions.length > 5) {
+    appendMoreHint(section, UI_TEXT.portionHint);
+  }
+  safeList(exercise.caution_notices).forEach(n => {
+    showNotice(section, safeText(n.reason) || safeText(n.target), 'warn');
+  });
+
+  container.appendChild(section);
+}
+
+function exerciseCard(name, reason, isTaboo, cue) {
+  const card = document.createElement('div');
+  card.className = isTaboo
+    ? 'rounded-xl border-l-4 border-red-300 bg-red-50 px-3 py-2'
+    : 'rounded-xl border-l-4 border-emerald-400 bg-emerald-50 px-3 py-2';
+  const nameEl = document.createElement('p');
+  nameEl.className = isTaboo ? 'text-sm font-bold text-red-600' : 'text-sm font-semibold text-emerald-700';
+  nameEl.textContent = (isTaboo ? '⛔ ' : '✅ ') + safeText(name);
+  card.appendChild(nameEl);
+  if (safeText(cue)) {
+    const cueEl = document.createElement('p');
+    cueEl.className = 'mt-0.5 text-[11px] text-slate-600 leading-relaxed';
+    cueEl.textContent = UI_TEXT.cuePrefix + cue;
+    card.appendChild(cueEl);
+  }
+  if (safeText(reason)) {
+    const reasonEl = document.createElement('p');
+    reasonEl.className = 'mt-0.5 text-[11px] text-slate-500 leading-relaxed';
+    reasonEl.textContent = reason;
+    card.appendChild(reasonEl);
+  }
+  return card;
+}
+
+/** 情绪档位徽章 + 命中信号依据（spec 6.3.3） */
+function renderMoodBadges(container, data) {
+  const wrap = document.createElement('div');
+  wrap.className = 'max-w-md mx-auto flex flex-wrap gap-1.5';
+
+  const level = document.createElement('span');
+  level.className = 'text-[11px] font-bold rounded-full px-2.5 py-1 bg-violet-100 text-violet-700';
+  level.textContent = '情绪档位 ' + safeText(data.mood_level);
+  wrap.appendChild(level);
+
+  safeList(data.matched_signals).forEach(sig => {
+    const badge = document.createElement('span');
+    badge.className = 'text-[11px] rounded-full px-2.5 py-1 bg-slate-100 text-slate-500';
+    const keywords = safeList(sig.hit_keywords).join('、');
+    badge.textContent = safeText(sig.signal_id) + (keywords ? '（' + keywords + '）' : '');
+    wrap.appendChild(badge);
+  });
+  container.appendChild(wrap);
+}
+
+/** 情绪资源卡片：name / minutes / where / mechanism（spec 6.3.4） */
+function renderMoodResourceCards(container, resources) {
+  const items = safeList(resources);
+  if (items.length === 0) { return; }
+  const section = document.createElement('div');
+  section.className = 'max-w-md mx-auto bg-white rounded-2xl shadow-sm p-3 space-y-2';
+
+  const title = document.createElement('p');
+  title.className = 'text-xs font-bold text-violet-600';
+  title.textContent = '💙 现在就能做的';
+  section.appendChild(title);
+
+  items.forEach(res => {
+    const card = document.createElement('div');
+    card.className = 'rounded-xl border border-violet-100 bg-violet-50/50 px-3 py-2';
+    const nameEl = document.createElement('p');
+    nameEl.className = 'text-sm font-semibold text-violet-700';
+    const minutes = res.minutes != null ? ' · ' + res.minutes + ' 分钟' : '';
+    nameEl.textContent = '✅ ' + safeText(res.name) + minutes;
+    card.appendChild(nameEl);
+    if (safeText(res.where)) {
+      const where = document.createElement('p');
+      where.className = 'mt-0.5 text-[11px] text-slate-500';
+      where.textContent = '📍 ' + res.where;
+      card.appendChild(where);
+    }
+    if (safeText(res.mechanism)) {
+      const mech = document.createElement('p');
+      mech.className = 'mt-0.5 text-[11px] text-slate-400 leading-relaxed';
+      mech.textContent = res.mechanism;
+      card.appendChild(mech);
+    }
+    renderMoodResourceRef(card, (res.ref && typeof res.ref === 'object') ? res.ref : null);
+    section.appendChild(card);
+  });
+  container.appendChild(section);
+}
+
+/** 资源卡片 ref 消费：audio+可用 → 播放控件；audio+不可用 → 降级提示；其余 → 不渲染 */
+function renderMoodResourceRef(card, ref) {
+  if (!ref || ref.ref_type !== 'audio') { return; }
+  if (ref.available === true) {
+    const url = buildAudioUrl(ref.object_id);
+    if (url === null) {
+      console.warn('音频引用 object_id 非法，跳过控件渲染', ref.object_id);
+    } else {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.preload = 'none';
+      audio.src = url;
+      audio.className = 'mt-1.5 w-full h-9';
+      card.appendChild(audio);
+    }
+  } else {
+    const tip = document.createElement('p');
+    tip.className = 'mt-1 text-[11px] text-slate-400';
+    tip.textContent = UI_TEXT.audioUnavailable;
+    card.appendChild(tip);
+  }
+}
+
+const ROUTE_RENDERERS = {
+  M4_CRISIS: renderCrisisCard,
+  MOOD_SUPPORT: renderMoodSupport,
+  HEALTH_QUERY: renderHealthQuery,
+  SMALL_TALK: renderSmallTalk
+};
+
+/* ====================================================================
+ * 体检结果渲染：标签徽章 + 禁忌清单 + 提示条 + 免责（spec 6.5）
+ * ==================================================================== */
+function renderHealthAnalysis(container, data) {
+  const section = document.createElement('div');
+  section.className = 'max-w-md mx-auto bg-white rounded-2xl shadow-sm p-3 space-y-3';
+
+  const title = document.createElement('p');
+  title.className = 'text-xs font-bold text-blue-600';
+  title.textContent = '🧪 体检分析结果';
+  section.appendChild(title);
+
+  const tags = safeList(data.tags);
+  if (tags.length === 0) {
+    showNotice(section, UI_TEXT.noTags, 'info');
+  } else {
+    const badgeWrap = document.createElement('div');
+    badgeWrap.className = 'flex flex-wrap gap-1.5';
+    tags.forEach(tag => {
+      const badge = document.createElement('span');
+      badge.className = 'text-xs font-bold rounded-full px-3 py-1.5 bg-orange-100 text-orange-700 border border-orange-200';
+      badge.textContent = '🏷️ ' + safeText(tag.name);
+      badgeWrap.appendChild(badge);
+    });
+    section.appendChild(badgeWrap);
+
+    const dietTaboos = safeList(data.diet_taboos);
+    const exTaboos = safeList(data.exercise_taboos);
+    if (dietTaboos.length || exTaboos.length) {
+      const tabooBox = document.createElement('div');
+      tabooBox.className = 'rounded-xl border border-red-200 bg-red-50 p-3 space-y-2';
+      if (dietTaboos.length) {
+        tabooBox.appendChild(tabooList('🍽️ 饮食注意', dietTaboos));
+      }
+      if (exTaboos.length) {
+        tabooBox.appendChild(tabooList('🏃 运动注意', exTaboos));
+      }
+      section.appendChild(tabooBox);
+    }
+  }
+
+  safeList(data.skipped_metrics).forEach(item => {
+    showNotice(section, safeText(item.message), 'warn');
+  });
+  safeList(data.notices).forEach(notice => {
+    showNotice(section, safeText(notice), 'info');
+  });
+
+  const disc = document.createElement('p');
+  disc.className = 'text-[10px] text-slate-400';
+  disc.textContent = safeText(data.disclaimer);
+  section.appendChild(disc);
+
+  container.appendChild(section);
+}
+
+function tabooList(title, items) {
+  const block = document.createElement('div');
+  const head = document.createElement('p');
+  head.className = 'text-[11px] font-bold text-red-600';
+  head.textContent = title;
+  block.appendChild(head);
+  const list = document.createElement('ul');
+  list.className = 'mt-1 space-y-0.5';
+  items.forEach(text => {
+    const li = document.createElement('li');
+    li.className = 'text-[11px] text-red-600/90 leading-relaxed';
+    li.textContent = '· ' + safeText(text);
+    list.appendChild(li);
+  });
+  block.appendChild(list);
+  return block;
+}
+
+/* ====================================================================
+ * 分区④ 体检表单区：FORM_FIELDS 声明式配置（决策 D4）
+ * ==================================================================== */
+const FORM_FIELDS = [
+  { section: 'profile', key: 'gender', label: '性别', type: 'radio', required: true, options: ['男', '女'] },
+  { section: 'profile', key: 'age', label: '年龄', type: 'number', unit: '岁' },
+  { section: 'profile', key: 'height', label: '身高', type: 'number', unit: 'cm' },
+  { section: 'profile', key: 'weight', label: '体重', type: 'number', unit: 'kg' },
+  { section: 'metrics', key: 'uric_acid', label: '血尿酸', type: 'number', unit: 'μmol/L' },
+  { section: 'metrics', key: 'fasting_glucose', label: '空腹血糖', type: 'number', unit: 'mmol/L' },
+  { section: 'metrics', key: 'total_cholesterol', label: '总胆固醇', type: 'number', unit: 'mmol/L' },
+  { section: 'metrics', key: 'triglyceride', label: '甘油三酯', type: 'number', unit: 'mmol/L' },
+  { section: 'metrics', key: 'ldl_c', label: '低密度脂蛋白', type: 'number', unit: 'mmol/L' },
+  { section: 'metrics', key: 'hdl_c', label: '高密度脂蛋白', type: 'number', unit: 'mmol/L' },
+  { section: 'metrics', key: 'systolic_bp', label: '收缩压', type: 'number', unit: 'mmHg' },
+  { section: 'metrics', key: 'diastolic_bp', label: '舒张压', type: 'number', unit: 'mmHg' },
+  { section: 'metrics', key: 'hemoglobin', label: '血红蛋白', type: 'number', unit: 'g/L' },
+  { section: 'metrics', key: 'h_pylori', label: '幽门螺杆菌', type: 'radio', options: ['阴性', '阳性'] }
+];
+
+const SECTION_TITLES = { profile: '基本档案', metrics: '体检指标' };
+
+function buildFormGroup(groupId) {
+  const group = document.getElementById(groupId);
+  const sectionKey = groupId.replace('form-', '').replace('-group', '');
+  const head = document.createElement('p');
+  head.className = 'text-xs font-bold text-slate-500 mb-2';
+  head.textContent = SECTION_TITLES[sectionKey];
+  group.appendChild(head);
+
+  FORM_FIELDS.filter(f => f.section === sectionKey).forEach(field => {
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-3';
+    if (field.type === 'radio') {
+      const label = document.createElement('p');
+      label.className = 'text-xs text-slate-600 mb-1.5 font-medium';
+      label.textContent = field.label + (field.required ? '（必填）' : '');
+      wrap.appendChild(label);
+      const row = document.createElement('div');
+      row.className = 'flex gap-2';
+      field.options.forEach(opt => {
+        const pill = document.createElement('label');
+        pill.className = 'flex-1 text-center text-xs border border-slate-200 rounded-lg py-2 cursor-pointer has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 font-medium transition';
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = field.key;
+        input.value = opt;
+        input.className = 'hidden';
+        pill.appendChild(input);
+        pill.appendChild(document.createTextNode(opt));
+        row.appendChild(pill);
+      });
+      wrap.appendChild(row);
+    } else {
+      const label = document.createElement('label');
+      label.className = 'block text-xs text-slate-600 mb-1 font-medium';
+      label.textContent = field.label + '（' + field.unit + '）';
+      wrap.appendChild(label);
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.name = field.key;
+      input.step = 'any';
+      input.placeholder = '选填';
+      input.className = 'w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition';
+      wrap.appendChild(input);
+    }
+    group.appendChild(wrap);
+  });
+}
+
+/** 组装 AnalysisRequest 请求体：留空不入请求体（spec 5.3.1.5） */
+function buildAnalysisRequest() {
+  const form = document.getElementById('health-form');
+  const get = key => {
+    const el = form.querySelector('[name="' + key + '"]');
+    return el ? el.value : '';
+  };
+  const genderEl = form.querySelector('input[name="gender"]:checked');
+  if (!genderEl) {
+    setModalError(UI_TEXT.genderRequired);
+    return null;
+  }
+  const profile = { gender: genderEl.value };
+  const metrics = {};
+  let hasOther = false;
+  FORM_FIELDS.filter(f => f.key !== 'gender').forEach(field => {
+    const raw = get(field.key);
+    if (typeof raw !== 'string') { return; }
+    const trimmed = raw.trim();
+    if (!trimmed) { return; }
+    const num = Number(trimmed);
+    if (field.type === 'number') {
+      if (Number.isNaN(num)) { return; }
+      (field.section === 'profile' ? profile : metrics)[field.key] = num;
+    } else {
+      metrics[field.key] = trimmed;
+    }
+    hasOther = true;
+  });
+  if (!hasOther) {
+    setModalError(UI_TEXT.allEmptyForm);
+    return null;
+  }
+  clearModalError();
+  return { profile, metrics };
+}
+
+function setModalError(text) {
+  const box = document.getElementById('modal-error');
+  box.textContent = text;
+  box.classList.remove('hidden');
+}
+
+function clearModalError() {
+  const box = document.getElementById('modal-error');
+  box.classList.add('hidden');
+}
+
+async function submitHealthForm() {
+  const payload = buildAnalysisRequest();
+  if (!payload) { return; }
+  const btn = document.getElementById('health-submit');
+  btn.disabled = true;
+  btn.textContent = '分析中…';
+  try {
+    const resp = await fetch(ENDPOINTS.health, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      last_health_tags = (safeList(data.tags)).map(t => t && t.name).filter(Boolean);
+      closeModal();
+      appendAssistantBlock(null, container => renderHealthAnalysis(container, data));
+      scrollToBottom();
+    } else if (resp.status === 422) {
+      const body = await resp.json().catch(() => null);
+      const messages = body && Array.isArray(body.detail)
+        ? body.detail.map(d => d.msg || d).join('；')
+        : '请求参数不合法，请检查输入格式';
+      setModalError(messages);
+    } else {
+      setModalError(UI_TEXT.serviceError);
+    }
+  } catch (err) {
+    setModalError(UI_TEXT.networkError);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '提交并生成健康标签';
+  }
+}
+
+function openModal() {
+  clearModalError();
+  document.getElementById('health-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('health-modal').classList.add('hidden');
+}
+
+/* ====================================================================
+ * 对话提交与渲染主流程（spec 5.2.1）
+ * ==================================================================== */
+async function sendChat(text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed) {
+    showToast(UI_TEXT.emptyInput);
+    return;
+  }
+  const input = document.getElementById('chat-input');
+  const btn = document.getElementById('btn-send');
+  input.value = '';
+  btn.disabled = true;
+
+
+  appendUserBubble(trimmed);
+  const loading = appendLoadingBubble();
+  scrollToBottom();
+
+  try {
+    const resp = await fetch(ENDPOINTS.chat, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUserId,
+        text: trimmed,
+        last_text: last_user_text || null,
+        shown_dish_ids: Array.from(shown_dish_ids),
+        shown_action_ids: Array.from(shown_action_ids)
+      })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      renderAssistantMessage(data);
+      last_user_text = trimmed;
+    } else if (resp.status === 422) {
+      const body = await resp.json().catch(() => null);
+      const messages = body && Array.isArray(body.detail)
+        ? body.detail.map(d => d.msg || d).join('；')
+        : '请求参数不合法，请检查输入格式';
+      appendSystemError(messages);
+    } else {
+      appendSystemError(UI_TEXT.serviceError);
+    }
+  } catch (err) {
+    appendSystemError(UI_TEXT.networkError);
+  } finally {
+    loading.remove();
+    btn.disabled = false;
+    scrollToBottom();
+  }
+}
+
+function renderAssistantMessage(data) {
+  try {
+    appendAssistantBlock(safeText(data.reply_text), container => {
+      const renderer = ROUTE_RENDERERS[data.route] || renderSmallTalk;
+      renderer(container, data);
+      safeList(data.notices).forEach(notice => showNotice(container, safeText(notice), 'info'));
+      const disc = document.createElement('p');
+      disc.className = 'max-w-md mx-auto mt-1 text-[10px] text-slate-400';
+      disc.textContent = safeText(data.disclaimer);
+      container.appendChild(disc);
+    });
+  } catch (err) {
+    console.warn('消息渲染异常，降级为纯文本', err);
+    appendAssistantBlock(safeText(data && data.reply_text), null);
+  }
+  scrollToBottom();
+}
+
+function appendUserBubble(text) {
+  const box = document.getElementById('chat-box');
+  const row = document.createElement('div');
+  row.className = 'flex justify-end';
+  const bubble = document.createElement('div');
+  bubble.className = 'bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-sm max-w-[80%]';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  box.appendChild(row);
+}
+
+function appendLoadingBubble() {
+  const box = document.getElementById('chat-box');
+  const row = document.createElement('div');
+  row.className = 'flex gap-2';
+  const avatar = document.createElement('div');
+  avatar.className = 'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm shrink-0';
+  avatar.textContent = '管';
+  const bubble = document.createElement('div');
+  bubble.className = 'bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm';
+  bubble.textContent = UI_TEXT.loading;
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  box.appendChild(row);
+  return row;
+}
+
+function appendAssistantBlock(replyText, extraRenderer) {
+  const box = document.getElementById('chat-box');
+  const wrap = document.createElement('div');
+  wrap.className = 'max-w-md mx-auto space-y-3';
+  if (replyText) {
+    const row = document.createElement('div');
+    row.className = 'flex gap-2';
+    const avatar = document.createElement('div');
+    avatar.className = 'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm shrink-0';
+    avatar.textContent = '管';
+    const bubble = document.createElement('div');
+    bubble.className = 'bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm max-w-[80%]';
+    bubble.textContent = replyText;
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    wrap.appendChild(row);
+  }
+  if (extraRenderer) {
+    const container = document.createElement('div');
+    container.className = 'space-y-3';
+    extraRenderer(container);
+    wrap.appendChild(container);
+  }
+  box.appendChild(wrap);
+  return wrap;
+}
+
+function appendSystemError(text) {
+  const box = document.getElementById('chat-box');
+  showNotice(box, text, 'danger');
+}
+
+/* ====================================================================
+ * 真实语音输入（Web Speech API，浏览器本地，零服务端请求）
+ * 真实图像识别（📷 选图 → FormData 上传 → 识别卡片）
+ * ==================================================================== */
+let last_health_tags = [];
+let recognition_instance = null;
+let last_user_text = null;
+const shown_dish_ids = new Set();
+const shown_action_ids = new Set();
+let is_recording = false;
+let food_recognizing = false;
+
+/* ====================================================================
+ * 快捷指令胶囊：声明式生成、点击发送/触发拍照、首条消息后淡出
+ * ==================================================================== */
+/* ====================================================================
+ * 无感身份：localStorage 自动生成（user_ + 4 位数字）+ 身份标签渲染
+ * ==================================================================== */
+function initUserId() {
+  try {
+    const stored = localStorage.getItem(USER_ID_STORAGE_KEY);
+    if (stored) { return stored; }
+    const digits = String(1000 + Math.floor(Math.random() * 9000));
+    const generated = USER_ID_PREFIX + digits;
+    localStorage.setItem(USER_ID_STORAGE_KEY, generated);
+    return generated;
+  } catch (err) {
+    const fallback = USER_ID_PREFIX + String(1000 + Math.floor(Math.random() * 9000));
+    return fallback;
+  }
+}
+
+function renderIdentityBadge(userId) {
+  const badge = document.getElementById('identity-badge');
+  if (!badge) { return; }
+  badge.textContent = UI_TEXT.identityBadgePrefix + userId;
+}
+
+const currentUserId = initUserId();
+
+function buildQuickCommands() {
+  const row = document.getElementById('quick-dock-commands');
+  if (!row) { return; }
+  QUICK_COMMANDS.forEach(cmd => {
+    const btn = document.createElement('button');
+    btn.className = 'bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-4 py-1.5 text-xs font-medium shadow-sm hover:bg-blue-100 transition';
+    btn.textContent = cmd.icon + ' ' + cmd.text;
+    btn.dataset.q = cmd.sendText;
+    if (cmd.special === 'camera') {
+      btn.addEventListener('click', () => {
+        document.getElementById('food-file-input').click();
+      });
+    } else {
+      btn.addEventListener('click', () => {
+        sendChat(btn.dataset.q || '');
+      });
+    }
+    row.appendChild(btn);
+  });
+}
+
+function getSpeechRecognition() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+/* ====================================================================
+ * 历史对话面板：URL 构造 / 拉取渲染 / 抽屉开合（rAF 滑入）/ 清空
+ * ==================================================================== */
+function buildHistoryUrl() {
+  return ENDPOINTS.history + '/' + encodeURIComponent(currentUserId);
+}
+
+async function fetchHistory() {
+  const list = document.getElementById('history-list');
+  if (!list) { return; }
+  list.textContent = UI_TEXT.historyLoading;
+  try {
+    const resp = await fetch(buildHistoryUrl());
+    if (resp.ok) {
+      const data = await resp.json();
+      renderHistoryPanel(data);
+    } else {
+      list.textContent = UI_TEXT.serviceError;
+    }
+  } catch (err) {
+    list.textContent = UI_TEXT.networkError;
+  }
+}
+
+let historyCache = [];
+
+function renderHistoryPanel(data) {
+  historyCache = safeList(data.history);
+  applyHistorySearch();
+}
+
+function renderHistoryList(entries) {
+  const list = document.getElementById('history-list');
+  if (!list) { return; }
+  list.textContent = '';
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'text-xs text-slate-400 text-center py-8 leading-relaxed';
+    empty.textContent = UI_TEXT.historyEmptyHint;
+    list.appendChild(empty);
+    return;
+  }
+  entries.slice().reverse().forEach(entry => {
+    const bubble = document.createElement('div');
+    if (entry.role === 'user') {
+      bubble.className = 'bg-slate-100 text-slate-700 rounded-2xl rounded-tl-sm px-3 py-2 text-xs leading-relaxed cursor-pointer hover:bg-slate-200 transition max-w-[85%]';
+      bubble.textContent = entry.content;
+      bubble.addEventListener('click', () => {
+        const input = document.getElementById('chat-input');
+        input.value = entry.content;
+        closeHistoryDrawer();
+        input.focus();
+      });
+      list.appendChild(bubble);
+    } else {
+      bubble.className = 'bg-blue-50 text-slate-700 rounded-2xl rounded-tr-sm px-3 py-2 text-xs leading-relaxed ml-auto max-w-[85%]';
+      bubble.textContent = entry.content;
+      list.appendChild(bubble);
+    }
+  });
+}
+
+function applyHistorySearch() {
+  const list = document.getElementById('history-list');
+  const search = document.getElementById('history-search');
+  if (!list) { return; }
+  const keyword = search ? search.value.trim() : '';
+  if (!keyword) {
+    renderHistoryList(historyCache);
+    return;
+  }
+  const filtered = historyCache.filter(entry => (entry.content || '').includes(keyword));
+  if (filtered.length === 0) {
+    list.textContent = '';
+    const empty = document.createElement('p');
+    empty.className = 'text-xs text-slate-400 text-center py-8 leading-relaxed';
+    empty.textContent = UI_TEXT.historySearchEmpty;
+    list.appendChild(empty);
+    return;
+  }
+  renderHistoryList(filtered);
+}
+
+function openHistoryDrawer() {
+  const mask = document.getElementById('history-drawer-mask');
+  const drawer = document.getElementById('history-drawer');
+  if (!mask || !drawer) { return; }
+  const search = document.getElementById('history-search');
+  if (search) { search.value = ''; }
+  mask.classList.remove('hidden');
+  drawer.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    drawer.classList.remove('translate-x-full');
+  });
+  fetchHistory();
+}
+
+function closeHistoryDrawer() {
+  const mask = document.getElementById('history-drawer-mask');
+  const drawer = document.getElementById('history-drawer');
+  if (!mask || !drawer) { return; }
+  drawer.classList.add('translate-x-full');
+  setTimeout(() => {
+    drawer.classList.add('hidden');
+    mask.classList.add('hidden');
+  }, 300);
+}
+
+async function clearHistory() {
+  if (!window.confirm(UI_TEXT.historyClearConfirm)) { return; }
+  try {
+    const resp = await fetch(buildHistoryUrl(), { method: 'DELETE' });
+    if (resp.ok) {
+      showToast(UI_TEXT.historyClearSuccess);
+      const search = document.getElementById('history-search');
+      if (search) { search.value = ''; }
+      historyCache = [];
+      renderHistoryPanel({ history: [] });
+    } else {
+      showToast(UI_TEXT.historyClearFailed);
+    }
+  } catch (err) {
+    showToast(UI_TEXT.historyClearFailed);
+  }
+}
+
+function startVoiceInput() {
+  const Recognition = getSpeechRecognition();
+  if (!Recognition) {
+    showToast(UI_TEXT.speechUnsupported);
+    return;
+  }
+  if (is_recording) {
+    if (recognition_instance) { recognition_instance.stop(); }
+    return;
+  }
+  if (!recognition_instance) {
+    recognition_instance = new Recognition();
+    recognition_instance.lang = 'zh-CN';
+    recognition_instance.continuous = false;
+    recognition_instance.interimResults = false;
+    recognition_instance.onresult = event => {
+      const transcript = event.results[event.results.length - 1][0].transcript.trim();
+      if (transcript) {
+        const input = document.getElementById('chat-input');
+        input.value = transcript;
+        input.focus();
+      }
+    };
+    recognition_instance.onerror = event => {
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        showToast(UI_TEXT.micDenied);
+      } else if (event.error === 'no-speech') {
+        showToast(UI_TEXT.noSpeech);
+      } else {
+        showToast(UI_TEXT.speechError);
+      }
+    };
+    recognition_instance.onend = () => {
+      is_recording = false;
+      resetVoiceButton();
+    };
+  }
+  is_recording = true;
+  const btn = document.getElementById('btn-voice');
+  btn.classList.add('bg-red-500', 'animate-pulse');
+  btn.title = UI_TEXT.voiceRecording;
+  showToast(UI_TEXT.voiceRecording);
+  try {
+    recognition_instance.start();
+  } catch (err) {
+    is_recording = false;
+    resetVoiceButton();
+    showToast(UI_TEXT.speechError);
+  }
+}
+
+function resetVoiceButton() {
+  const btn = document.getElementById('btn-voice');
+  btn.classList.remove('bg-red-500', 'animate-pulse');
+  btn.title = '语音输入';
+}
+
+function buildFoodFormData(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  last_health_tags.forEach(tag => formData.append('tags', tag));
+  return formData;
+}
+
+async function uploadFoodImage(file) {
+  if (food_recognizing) { return; }
+  food_recognizing = true;
+  const loadingRow = appendAssistantBlock(UI_TEXT.recognizingFood, null);
+  scrollToBottom();
+  try {
+    const resp = await fetch(ENDPOINTS.recognizeFood, {
+      method: 'POST',
+      body: buildFoodFormData(file)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      loadingRow.remove();
+      appendAssistantBlock(null, container => renderFoodCard(container, data));
+      scrollToBottom();
+    } else {
+      const body = await resp.json().catch(() => null);
+      const message = body && body.detail
+        ? (typeof body.detail === 'string' ? body.detail : body.detail.map(d => d.msg || d).join('；'))
+        : UI_TEXT.serviceError;
+      loadingRow.remove();
+      showToast(message);
+    }
+  } catch (err) {
+    loadingRow.remove();
+    showToast(UI_TEXT.networkError);
+  } finally {
+    food_recognizing = false;
+    const fileInput = document.getElementById('food-file-input');
+    fileInput.value = '';
+  }
+}
+
+function renderFoodCard(container, data) {
+  const section = document.createElement('div');
+  section.className = 'max-w-md mx-auto bg-white rounded-2xl shadow-sm p-3 space-y-2';
+
+  const title = document.createElement('p');
+  title.className = 'text-xs font-bold text-blue-600';
+  title.textContent = '📷 菜品识别';
+  section.appendChild(title);
+
+  const nameEl = document.createElement('p');
+  nameEl.className = 'text-base font-bold text-slate-800';
+  nameEl.textContent = '🍽️ ' + safeText(data.food_name);
+  section.appendChild(nameEl);
+
+  const isUnknown = safeText(data.food_name) === '未知菜品';
+  if (!isUnknown) {
+    const badge = document.createElement('span');
+    badge.className = data.is_forbidden
+      ? 'inline-block text-xs font-bold rounded-full px-3 py-1.5 bg-red-100 text-red-700 border border-red-300'
+      : 'inline-block text-xs font-bold rounded-full px-3 py-1.5 bg-emerald-100 text-emerald-700 border border-emerald-300';
+    badge.textContent = data.is_forbidden ? '⛔ 不建议食用' : '✅ 可以食用';
+    section.appendChild(badge);
+  }
+
+  if (safeText(data.reason)) {
+    const reason = document.createElement('p');
+    reason.className = 'text-[11px] text-slate-500 leading-relaxed';
+    reason.textContent = data.reason;
+    section.appendChild(reason);
+  }
+
+  if (!isUnknown && data.is_forbidden && safeText(data.swap_to)) {
+    const swap = document.createElement('p');
+    swap.className = 'text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-200';
+    swap.textContent = '💡 建议换成：' + data.swap_to;
+    section.appendChild(swap);
+  }
+
+  safeList(data.notices).forEach(notice => {
+    showNotice(section, safeText(notice), 'info');
+  });
+
+  const disc = document.createElement('p');
+  disc.className = 'text-[10px] text-slate-400';
+  disc.textContent = safeText(data.disclaimer);
+  section.appendChild(disc);
+
+  container.appendChild(section);
+}
+
+/* ====================================================================
+ * 情绪自查便签：声明式表单 + 提交 + 高危警告弹层 + 结果卡片
+ * ==================================================================== */
+let selfcheck_pending_result = null;
+let selfcheck_warning_active = false;
+
+function buildSelfcheckForm() {
+  const itemsBox = document.getElementById('selfcheck-items');
+  itemsBox.innerHTML = '';
+  SC_ITEMS.forEach(item => {
+    const label = document.createElement('label');
+    label.className = 'flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer has-[:checked]:border-violet-400 has-[:checked]:bg-violet-50 transition';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'sc';
+    input.value = item.value;
+    input.className = 'mt-0.5 accent-violet-600';
+    const span = document.createElement('span');
+    span.className = 'text-xs text-slate-600 leading-relaxed';
+    span.textContent = item.text;
+    label.appendChild(input);
+    label.appendChild(span);
+    itemsBox.appendChild(label);
+  });
+
+  const durBox = document.getElementById('selfcheck-durations');
+  durBox.innerHTML = '';
+  DURATION_OPTIONS.forEach(option => {
+    const label = document.createElement('label');
+    label.className = 'text-xs border border-slate-200 rounded-full px-3.5 py-2 cursor-pointer has-[:checked]:border-violet-400 has-[:checked]:bg-violet-50 has-[:checked]:text-violet-700 font-medium transition';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'duration';
+    input.value = option;
+    input.className = 'hidden';
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(option));
+    durBox.appendChild(label);
+  });
+}
+
+function openSelfcheckModal() {
+  setSelfcheckError('');
+  document.getElementById('selfcheck-modal').classList.remove('hidden');
+}
+
+function closeSelfcheckModal() {
+  document.getElementById('selfcheck-modal').classList.add('hidden');
+}
+
+function setSelfcheckError(text) {
+  const box = document.getElementById('selfcheck-error');
+  if (!text) {
+    box.classList.add('hidden');
+    box.textContent = '';
+  } else {
+    box.textContent = text;
+    box.classList.remove('hidden');
+  }
+}
+
+function collectSelfcheckInput() {
+  const checked = Array.from(document.querySelectorAll('#selfcheck-form input[name="sc"]:checked'))
+    .map(el => el.value)
+    .sort();
+  const durationEl = document.querySelector('#selfcheck-form input[name="duration"]:checked');
+  if (checked.length === 0) {
+    setSelfcheckError(UI_TEXT.selfcheckEmpty);
+    return null;
+  }
+  if (!durationEl) {
+    setSelfcheckError(UI_TEXT.selfcheckDurationMissing);
+    return null;
+  }
+  return { checked_sc_ids: checked, duration: durationEl.value };
+}
+
+async function submitSelfcheck() {
+  const payload = collectSelfcheckInput();
+  if (!payload) { return; }
+  const highRisk = payload.checked_sc_ids.includes(HIGH_RISK_SC_ID) && payload.duration === HIGH_RISK_DURATION;
+  const btn = document.getElementById('selfcheck-submit');
+  btn.disabled = true;
+  btn.textContent = UI_TEXT.selfcheckLoading;
+  if (highRisk) {
+    selfcheck_warning_active = true;
+    showHighRiskWarning();
+  }
+  try {
+    const resp = await fetch(ENDPOINTS.selfcheck, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      closeSelfcheckModal();
+      if (selfcheck_warning_active) {
+        selfcheck_pending_result = data;
+      } else {
+        renderSelfcheckResult(data);
+      }
+    } else {
+      const body = await resp.json().catch(() => null);
+      const message = body && body.detail
+        ? (typeof body.detail === 'string' ? body.detail : body.detail.map(d => d.msg || d).join('；'))
+        : UI_TEXT.serviceError;
+      showToast(message);
+    }
+  } catch (err) {
+    showToast(UI_TEXT.networkError);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = UI_TEXT.selfcheckSubmit;
+  }
+}
+
+function showHighRiskWarning() {
+  document.getElementById('high-risk-modal').classList.remove('hidden');
+}
+
+function hideHighRiskWarning() {
+  document.getElementById('high-risk-modal').classList.add('hidden');
+}
+
+function renderSelfcheckResult(data) {
+  appendAssistantBlock(null, container => renderSelfcheckCard(container, data));
+  scrollToBottom();
+}
+
+function renderSelfcheckCard(container, data) {
+  const section = document.createElement('div');
+  section.className = 'max-w-md mx-auto bg-white rounded-2xl shadow-sm p-3 space-y-3';
+
+  const title = document.createElement('p');
+  title.className = 'text-xs font-bold text-violet-600';
+  title.textContent = '📝 情绪自查结果';
+  section.appendChild(title);
+
+  const badge = document.createElement('span');
+  badge.className = 'inline-block text-xs font-bold rounded-full px-3 py-1.5 bg-violet-100 text-violet-700 border border-violet-200';
+  badge.textContent = '情绪档位 ' + safeText(data.mood_level);
+  section.appendChild(badge);
+
+  const kbItems = safeList(data.kb_recommendations);
+  if (kbItems.length > 0) {
+    const kbBox = document.createElement('div');
+    kbBox.className = 'space-y-2';
+    const kbTitle = document.createElement('p');
+    kbTitle.className = 'text-[11px] font-bold text-violet-600';
+    kbTitle.textContent = '💡 现在可以试试这些方法';
+    kbBox.appendChild(kbTitle);
+    kbItems.forEach(kb => {
+      const card = document.createElement('div');
+      card.className = 'rounded-xl border border-violet-100 bg-violet-50/50 px-3 py-2';
+      const method = document.createElement('p');
+      method.className = 'text-sm font-semibold text-violet-700';
+      method.textContent = '✅ ' + safeText(kb.method);
+      card.appendChild(method);
+      if (safeText(kb.howto)) {
+        const howto = document.createElement('p');
+        howto.className = 'mt-0.5 text-[11px] text-slate-500 leading-relaxed';
+        howto.textContent = kb.howto;
+        card.appendChild(howto);
+      }
+      kbBox.appendChild(card);
+    });
+    section.appendChild(kbBox);
+  }
+
+  const referrals = safeList(data.referrals);
+  if (referrals.length > 0) {
+    const refBox = document.createElement('div');
+    refBox.className = 'space-y-2';
+    const refTitle = document.createElement('p');
+    refTitle.className = 'text-[11px] font-bold text-red-600';
+    refTitle.textContent = '🏥 建议尽快联系专业支持';
+    refBox.appendChild(refTitle);
+    referrals.forEach(ref => {
+      const card = document.createElement('div');
+      card.className = 'rounded-xl border border-red-200 bg-red-50 px-3 py-2';
+      const name = document.createElement('p');
+      name.className = 'text-sm font-bold text-red-700';
+      name.textContent = '⚠️ ' + safeText(ref.name);
+      card.appendChild(name);
+      const contact = safeText(ref.contact);
+      if (contact) {
+        const line = document.createElement('p');
+        line.className = 'mt-0.5 text-xs text-slate-700';
+        line.textContent = contact;
+        card.appendChild(line);
+        if (/^[0-9\-+\s()/]{5,}$/.test(contact)) {
+          contact.split('/').forEach(seg => {
+            const trimmed = seg.trim();
+            if (!trimmed || !/^[0-9\-+\s()]{5,}$/.test(trimmed)) { return; }
+            const link = document.createElement('a');
+            link.href = 'tel:' + trimmed.replace(/\s+/g, '');
+            link.className = 'mt-1.5 mr-2 inline-flex items-center gap-1 bg-red-600 text-white text-xs font-bold rounded-full px-3.5 py-1.5 hover:bg-red-700 transition';
+            link.textContent = '📞 ' + trimmed;
+            card.appendChild(link);
+          });
+        }
+      }
+      if (safeText(ref.hours)) {
+        const hours = document.createElement('p');
+        hours.className = 'mt-0.5 text-[11px] text-slate-500';
+        hours.textContent = '服务时间：' + ref.hours;
+        card.appendChild(hours);
+      }
+      refBox.appendChild(card);
+    });
+    section.appendChild(refBox);
+  }
+
+  renderMoodResourceCards(section, data.mood_resources);
+
+  safeList(data.notices).forEach(notice => {
+    showNotice(section, safeText(notice), 'info');
+  });
+
+  const disc = document.createElement('p');
+  disc.className = 'text-[10px] text-slate-400';
+  disc.textContent = safeText(data.disclaimer);
+  section.appendChild(disc);
+
+  container.appendChild(section);
+}
+
+/* ====================================================================
+ * 分区⑤ 事件绑定区
+ * ==================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  buildFormGroup('form-profile-group');
+  buildFormGroup('form-metrics-group');
+
+  document.getElementById('btn-send').addEventListener('click', () => {
+    sendChat(document.getElementById('chat-input').value);
+  });
+  document.getElementById('chat-input').addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      sendChat(document.getElementById('chat-input').value);
+    }
+  });
+
+  document.getElementById('btn-voice').addEventListener('click', startVoiceInput);
+  document.getElementById('btn-camera').addEventListener('click', () => {
+    document.getElementById('food-file-input').click();
+  });
+  document.getElementById('food-file-input').addEventListener('change', event => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) { return; }
+    uploadFoodImage(file);
+  });
+
+  document.getElementById('btn-health-form').addEventListener('click', openModal);
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('health-submit').addEventListener('click', submitHealthForm);
+  document.getElementById('health-modal').addEventListener('click', event => {
+    if (event.target === event.currentTarget) { closeModal(); }
+  });
+
+  buildSelfcheckForm();
+  renderIdentityBadge(currentUserId);
+  document.getElementById('btn-selfcheck').addEventListener('click', openSelfcheckModal);
+  document.getElementById('selfcheck-close').addEventListener('click', closeSelfcheckModal);
+  document.getElementById('selfcheck-submit').addEventListener('click', submitSelfcheck);
+  document.getElementById('selfcheck-modal').addEventListener('click', event => {
+    if (event.target === event.currentTarget) { closeSelfcheckModal(); }
+  });
+  document.getElementById('high-risk-close').addEventListener('click', () => {
+    hideHighRiskWarning();
+    selfcheck_warning_active = false;
+    if (selfcheck_pending_result) {
+      const data = selfcheck_pending_result;
+       selfcheck_pending_result = null;
+       renderSelfcheckResult(data);
+     }
+   });
+
+  buildQuickCommands();
+  document.getElementById('btn-history').addEventListener('click', openHistoryDrawer);
+  document.getElementById('history-close').addEventListener('click', closeHistoryDrawer);
+  document.getElementById('history-drawer-mask').addEventListener('click', event => {
+    if (event.target === event.currentTarget) { closeHistoryDrawer(); }
+  });
+  document.getElementById('history-clear').addEventListener('click', clearHistory);
+  document.getElementById('history-search').addEventListener('input', applyHistorySearch);
+});
+</script>
+</body>
+</html>
